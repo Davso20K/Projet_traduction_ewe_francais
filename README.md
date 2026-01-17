@@ -2,6 +2,13 @@
 
 Ce projet vise à développer une solution complète de reconnaissance vocale et de traduction pour la langue **Éwé** (langue vernaculaire parlée principalement au Togo, au Ghana et au Bénin). L'objectif final est de permettre la conversion de la parole en texte (Speech-to-Text) et la traduction bidirectionnelle entre l'Éwé et des langues comme le Français ou l'Anglais, le tout via une interface graphique intuitive.
 
+**Membres du groupe**
+- AFOMALE David
+- DOGBO Sarah
+- BOTRE Aboudou
+- TEPE Paulin
+- NOYOULIWA Victoire
+
 > [!NOTE]
 > **Statut actuel :** Le projet est en cours de développement. Les phases de collecte de données (scraping) et de prétraitement sont opérationnelles. L'entraînement des modèles et le développement de l'interface graphique (GUI) sont les prochaines étapes.
 
