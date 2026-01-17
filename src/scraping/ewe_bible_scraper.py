@@ -1,0 +1,210 @@
+import asyncio
+import json
+import time
+import re
+import logging
+from pathlib import Path
+from urllib.parse import urljoin
+
+import aiohttp
+from bs4 import BeautifulSoup
+from crawl4ai import AsyncWebCrawler
+
+from src.config.settings import AUDIO_DIR, TEXT_DIR, META_DIR
+
+# ---------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class EweBibleScraper:
+    """
+    Scraper Bible Ewe
+    Sauvegarde UNIQUEMENT les données brutes dans data/raw/
+    """
+
+    def __init__(self):
+        AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+        TEXT_DIR.mkdir(parents=True, exist_ok=True)
+        META_DIR.mkdir(parents=True, exist_ok=True)
+
+        self.base_text_url = "https://www.bible.com/fr/bible/3306/{book}.{chapter}.EB14"
+        self.base_audio_url = "https://www.bible.com/fr/audio-bible/3306/{book}.{chapter}.EB14"
+
+        self.books = {
+            "GEN": {"name": "Genèse", "chapters": 50},
+            "MAT": {"name": "Matthieu", "chapters": 28},
+            "JHN": {"name": "Jean", "chapters": 21},
+        }
+
+        self.session = None
+        self.records = []
+
+    # -----------------------------------------------------------------
+    # HTTP
+    # -----------------------------------------------------------------
+    async def init_session(self):
+        self.session = aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=30),
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0 Safari/537.36"
+                )
+            }
+        )
+
+    async def close_session(self):
+        if self.session:
+            await self.session.close()
+
+    # -----------------------------------------------------------------
+    # Text
+    # -----------------------------------------------------------------
+    async def extract_text(self, url: str):
+        try:
+            async with AsyncWebCrawler(verbose=False) as crawler:
+                result = await crawler.arun(
+                    url=url,
+                    wait_for="div[class*='Chapter'], .verse",
+                    delay_before_return_html=3
+                )
+                if not result.success:
+                    return []
+
+                soup = BeautifulSoup(result.html, "html.parser")
+                return self._parse_verses(soup)
+
+        except Exception as e:
+            logger.warning(f"Fallback texte {url}: {e}")
+            return await self._fallback_text(url)
+
+    async def _fallback_text(self, url):
+        if not self.session:
+            await self.init_session()
+
+        async with self.session.get(url) as resp:
+            if resp.status != 200:
+                return []
+
+            soup = BeautifulSoup(await resp.text(), "html.parser")
+            return self._parse_verses(soup)
+
+    def _parse_verses(self, soup):
+        verses = []
+        elements = soup.find_all(["span", "div"], {"data-usfm": True})
+
+        for i, el in enumerate(elements, start=1):
+            text = el.get_text(strip=True)
+            if len(text) > 10:
+                verses.append({
+                    "verse": i,
+                    "text": text,
+                    "usfm": el.get("data-usfm", "")
+                })
+
+        return verses
+
+    # -----------------------------------------------------------------
+    # Audio
+    # -----------------------------------------------------------------
+    async def extract_audio_links(self, url: str):
+        try:
+            async with AsyncWebCrawler(verbose=False) as crawler:
+                result = await crawler.arun(
+                    url=url,
+                    wait_for="audio, source",
+                    delay_before_return_html=5
+                )
+                if not result.success:
+                    return []
+
+                soup = BeautifulSoup(result.html, "html.parser")
+                return self._parse_audio_links(soup, url)
+
+        except Exception:
+            return await self._fallback_audio(url)
+
+    async def _fallback_audio(self, url):
+        if not self.session:
+            await self.init_session()
+
+        async with self.session.get(url) as resp:
+            if resp.status != 200:
+                return []
+
+            soup = BeautifulSoup(await resp.text(), "html.parser")
+            return self._parse_audio_links(soup, url)
+
+    def _parse_audio_links(self, soup, base_url):
+        links = set()
+        for el in soup.find_all(["audio", "source"]):
+            src = el.get("src")
+            if src:
+                links.add(urljoin(base_url, src))
+        return list(links)
+
+    # -----------------------------------------------------------------
+    # Download
+    # -----------------------------------------------------------------
+    async def download_audio(self, url: str, filename: str):
+        if not self.session:
+            await self.init_session()
+
+        async with self.session.get(url) as resp:
+            if resp.status != 200:
+                return None
+
+            path = AUDIO_DIR / filename
+            path.write_bytes(await resp.read())
+            return str(path)
+
+    # -----------------------------------------------------------------
+    # Chapter
+    # -----------------------------------------------------------------
+    async def process_chapter(self, book_code: str, chapter: int):
+        logger.info(f"{book_code} chapitre {chapter}")
+
+        text_url = self.base_text_url.format(book=book_code, chapter=chapter)
+        audio_url = self.base_audio_url.format(book=book_code, chapter=chapter)
+
+        verses = await self.extract_text(text_url)
+        audio_links = await self.extract_audio_links(audio_url)
+
+        for v in verses:
+            audio_file = f"{book_code.lower()}_{chapter:02d}_{v['verse']:02d}.mp3"
+
+            audio_path = None
+            if audio_links:
+                audio_path = await self.download_audio(audio_links[0], audio_file)
+
+            # texte brut
+            text_path = TEXT_DIR / audio_file.replace(".mp3", ".txt")
+            text_path.write_text(v["text"], encoding="utf-8")
+
+            self.records.append({
+                "book": book_code,
+                "chapter": chapter,
+                "verse": v["verse"],
+                "text": v["text"],
+                "audio_path": audio_path,
+                "text_url": text_url,
+                "audio_url": audio_url,
+                "timestamp": time.time()
+            })
+
+        await asyncio.sleep(2)
+
+    # -----------------------------------------------------------------
+    # Save
+    # -----------------------------------------------------------------
+    def save_metadata(self):
+        out = META_DIR / "ewe_bible_raw.json"
+        out.write_text(
+            json.dumps(self.records, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+        logger.info(f"{len(self.records)} versets sauvegardés")

@@ -1,0 +1,7 @@
+
+aiohttp
+requests
+beautifulsoup4
+crawl4ai
+
+playwright
