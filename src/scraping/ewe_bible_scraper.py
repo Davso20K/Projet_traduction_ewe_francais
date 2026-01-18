@@ -25,10 +25,20 @@ class EweBibleScraper:
     Sauvegarde UNIQUEMENT les données brutes dans data/raw/
     """
 
-    def __init__(self):
-        AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-        TEXT_DIR.mkdir(parents=True, exist_ok=True)
-        META_DIR.mkdir(parents=True, exist_ok=True)
+    def __init__(self, output_dir=None):
+        if output_dir:
+            self.root_dir = Path(output_dir)
+            self.audio_dir = self.root_dir / "audio"
+            self.text_dir = self.root_dir / "texts"
+            self.meta_dir = self.root_dir / "metadata"
+        else:
+            self.audio_dir = AUDIO_DIR
+            self.text_dir = TEXT_DIR
+            self.meta_dir = META_DIR
+
+        self.audio_dir.mkdir(parents=True, exist_ok=True)
+        self.text_dir.mkdir(parents=True, exist_ok=True)
+        self.meta_dir.mkdir(parents=True, exist_ok=True)
 
         self.base_text_url = "https://www.bible.com/fr/bible/3306/{book}.{chapter}.EB14"
         self.base_audio_url = "https://www.bible.com/fr/audio-bible/3306/{book}.{chapter}.EB14"
@@ -158,7 +168,7 @@ class EweBibleScraper:
             if resp.status != 200:
                 return None
 
-            path = AUDIO_DIR / filename
+            path = self.audio_dir / filename
             path.write_bytes(await resp.read())
             return str(path)
 
@@ -182,7 +192,7 @@ class EweBibleScraper:
                 audio_path = await self.download_audio(audio_links[0], audio_file)
 
             # texte brut
-            text_path = TEXT_DIR / audio_file.replace(".mp3", ".txt")
+            text_path = self.text_dir / audio_file.replace(".mp3", ".txt")
             text_path.write_text(v["text"], encoding="utf-8")
 
             self.records.append({
@@ -201,8 +211,8 @@ class EweBibleScraper:
     # -----------------------------------------------------------------
     # Save
     # -----------------------------------------------------------------
-    def save_metadata(self):
-        out = META_DIR / "ewe_bible_raw.json"
+    def save_corpus_data(self):
+        out = self.meta_dir / "ewe_bible_raw.json"
         out.write_text(
             json.dumps(self.records, ensure_ascii=False, indent=2),
             encoding="utf-8"

@@ -42,7 +42,7 @@ Le système final offrira les fonctionnalités suivantes :
 ### 1. Collecte de données (Scraping)
 Un scraper robuste a été mis en œuvre pour extraire le corpus biblique Éwé (texte et audio) depuis bible.com. Cela constitue la base de notre dataset d'entraînement.
 -   **Script :** `src/scraping/ewe_bible_scraper.py`
--   **Lancement :** `python src/pipeline/build_corpus.py`
+-   **Lancement :** `python -m src.pipeline.build_corpus`
 
 ### 2. Prétraitement
 Les données brutes sont transformées pour être compatibles avec les modèles de Deep Learning (comme Whisper) :
@@ -69,7 +69,7 @@ venv\Scripts\activate
 # Linux/Mac
 source venv/bin/activate
 
-# Installer les dépendances
+# Installer les dépendances (IMPORTANT)
 pip install -r requirements.txt
 ```
 
@@ -77,7 +77,8 @@ pip install -r requirements.txt
 
 Pour générer le corpus de données :
 ```bash
-python src/pipeline/build_corpus.py
+# Utiliser l'option -m pour éviter les erreurs d'importation
+python -m src.pipeline.build_corpus
 ```
 Cela créera les dossiers `raw/` et `processed/` dans le répertoire `data/`.
 
