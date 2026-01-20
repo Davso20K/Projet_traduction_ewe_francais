@@ -10,7 +10,7 @@ Ce projet vise à développer une solution complète de reconnaissance vocale et
 - NOYOULIWA Victoire
 
 > [!NOTE]
-> **Statut actuel :** Le projet est en phase active de collecte de données. Le scraper **Gegbe (Mina)** a été optimisé (extraction de la Bible complète, gestion des reprises, téléchargements audio optimisés). L'entraînement des modèles et le développement de l'interface graphique (GUI) sont les prochaines étapes.
+> **Statut actuel :** Le projet est en phase active de collecte de données. Les scrapers **Éwé** et **Gegbe (Mina)** ont été entièrement optimisés (extraction des Bibles complètes de 73 livres, gestion des reprises, téléchargements audio par chapitre). L'entraînement des modèles et le développement de l'interface graphique (GUI) sont les prochaines étapes.
 
 ## Vision du Projet
 
@@ -42,10 +42,10 @@ Le système final offrira les fonctionnalités suivantes :
 ## État d'avancement technique
 
 ### 1. Collecte de données (Scraping)
-Des scrapers robustes ont été mis en œuvre pour extraire le corpus biblique (texte et audio) depuis bible.com.
--   **Éwé :** `src/scraping/ewe_bible_scraper.py`
--   **Gegbe (Mina) :** `src/scraping/gegbe_bible_scraper.py` (Version optimisée avec 73 livres, gestion des reprises et parsing par verset).
--   **Structure :** Extraction d'un fichier audio par chapitre et des textes par verset pour une meilleure gestion du dataset.
+Des scrapers robustes et optimisés ont été mis en œuvre pour extraire le corpus biblique complet (73 livres, texte et audio) depuis bible.com.
+-   **Éwé :** `src/scraping/ewe_bible_scraper.py` (Optimisé, gestion des reprises).
+-   **Gegbe (Mina) :** `src/scraping/gegbe_bible_scraper.py` (Optimisé, gestion des reprises).
+-   **Structure :** Extraction d'un fichier audio par chapitre pour une meilleure efficacité de stockage et de parsing.
 -   **Lancement :** `python -m src.pipeline.build_corpus`
 
 
