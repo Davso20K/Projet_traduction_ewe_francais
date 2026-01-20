@@ -8,3 +8,5 @@ torch
 torchaudio
 pandas
 tqdm
+imageio-ffmpeg
+pydub
