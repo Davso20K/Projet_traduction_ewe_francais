@@ -1,6 +1,6 @@
-# Traducteur et Reconnaissance Vocale Éwé (Speech-to-Text & Translation)
+# Traducteur et Reconnaissance Vocale (Éwé & Gegbe)
 
-Ce projet vise à développer une solution complète de reconnaissance vocale et de traduction pour la langue **Éwé** (langue vernaculaire parlée principalement au Togo, au Ghana et au Bénin). L'objectif final est de permettre la conversion de la parole en texte (Speech-to-Text) et la traduction bidirectionnelle entre l'Éwé et des langues comme le Français ou l'Anglais, le tout via une interface graphique intuitive.
+Ce projet vise à développer une solution complète de reconnaissance vocale et de traduction pour les langues **Éwé** et **Gegbe (Mina)** (langues vernaculaires parlées principalement au Togo, au Ghana et au Bénin). L'objectif final est de permettre la conversion de la parole en texte (Speech-to-Text) et la traduction bidirectionnelle entre ces langues et le Français ou l'Anglais, le tout via une interface graphique intuitive.
 
 **Membres du groupe**
 - AFOMALE David
@@ -10,15 +10,15 @@ Ce projet vise à développer une solution complète de reconnaissance vocale et
 - NOYOULIWA Victoire
 
 > [!NOTE]
-> **Statut actuel :** Le projet est en cours de développement. Les phases de collecte de données (scraping) et de prétraitement sont opérationnelles. L'entraînement des modèles et le développement de l'interface graphique (GUI) sont les prochaines étapes.
+> **Statut actuel :** Le projet est en cours de développement. Les phases de collecte de données (visualisées par les nouveaux scrapers pour l'Éwé et le Gegbe) et de prétraitement sont opérationnelles. L'entraînement des modèles et le développement de l'interface graphique (GUI) sont les prochaines étapes.
 
 ## Vision du Projet
 
 Le système final offrira les fonctionnalités suivantes :
-1.  **Reconnaissance Vocale (ASR) :** Conversion de fichiers audio ou de flux vocaux en direct en texte Éwé.
+1.  **Reconnaissance Vocale (ASR) :** Conversion de fichiers audio ou de flux vocaux en direct en texte (Éwé/Gegbe).
 2.  **Traduction Bidirectionnelle :**
-    -   Éwé ➔ Français / Anglais
-    -   Français / Anglais ➔ Éwé
+    -   Éwé/Gegbe ➔ Français / Anglais
+    -   Français / Anglais ➔ Éwé/Gegbe
 3.  **Interface Graphique (GUI) :** Une application simple permettant aux utilisateurs d'interagir facilement avec le système.
 
 ## Structure du Projet
@@ -26,11 +26,13 @@ Le système final offrira les fonctionnalités suivantes :
 ```text
 ├── data/
 │   ├── raw/                # Données brutes (scripts de scraping)
+│   │   ├── ewe/            # Corpus Éwé
+│   │   └── gegbe/          # Corpus Gegbe (Mina)
 │   └── processed/          # Données nettoyées et prêtes pour l'entraînement
 ├── models/                 # Modèles entraînés (Whisper, etc.)
 ├── notebooks/              # Expérimentations et suivi d'entraînement
 ├── src/
-│   ├── scraping/           # Scripts de collecte de données (Bible Éwé)
+│   ├── scraping/           # Scripts de collecte de données (Bible Éwé & Gegbe)
 │   ├── preprocessing/      # Nettoyage audio et textuel
 │   ├── pipeline/           # Orchestration des tâches
 │   └── config/             # Paramètres du projet
@@ -40,9 +42,11 @@ Le système final offrira les fonctionnalités suivantes :
 ## État d'avancement technique
 
 ### 1. Collecte de données (Scraping)
-Un scraper robuste a été mis en œuvre pour extraire le corpus biblique Éwé (texte et audio) depuis bible.com. Cela constitue la base de notre dataset d'entraînement.
--   **Script :** `src/scraping/ewe_bible_scraper.py`
+Des scrapers robustes ont été mis en œuvre pour extraire le corpus biblique (texte et audio) depuis bible.com.
+-   **Éwé :** `src/scraping/ewe_bible_scraper.py`
+-   **Gegbe (Mina) :** `src/scraping/gegbe_bible_scraper.py`
 -   **Lancement :** `python -m src.pipeline.build_corpus`
+
 
 ### 2. Prétraitement
 Les données brutes sont transformées pour être compatibles avec les modèles de Deep Learning (comme Whisper) :
@@ -77,10 +81,15 @@ pip install -r requirements.txt
 
 Pour générer le corpus de données :
 ```bash
-# Utiliser l'option -m pour éviter les erreurs d'importation
+# Pour scraper les deux langues (Éwé et Gegbe)
 python -m src.pipeline.build_corpus
+
+# Pour scraper une langue spécifique
+python -m src.pipeline.build_corpus ewe
+python -m src.pipeline.build_corpus gegbe
 ```
-Cela créera les dossiers `raw/` et `processed/` dans le répertoire `data/`.
+Cela créera les dossiers `raw/ewe` et `raw/gegbe` dans le répertoire `data/`.
+
 
 ## Auteur
 **AFOMALE Komi David Frank**
