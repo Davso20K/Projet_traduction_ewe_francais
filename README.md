@@ -19,7 +19,10 @@ Le projet intègre nativement les trois piliers suivants, fonctionnels et testé
 -   **Implémentation** : 
     -   Nous utilisons une approche unifiée où le modèle est capable de transcrire les deux langues.
     -   Entraînement optimisé pour CPU via le script `src/models/train_whisper_cpu.py`.
-    -   Données : Corpus biblique aligné (Audio Chapitre ↔ Texte).
+    -   **Données** : Le modèle est entraîné sur **notre propre corpus biblique** constitué localement par nos scrapers. Il combine :
+        -   Audio/Texte **Éwé** (Bible complète).
+        -   Audio/Texte **Gegbe** (Bible complète).
+        -   Ces données sont fusionnées dans `data/processed/bible_asr_dataset.csv`.
 
 ### 2. 🔄 Chaîne de Traduction en Cascade (Pivot Strategy)
 Une architecture sophistiquée en deux temps pour pallier le manque de données directes Mina-Français :
@@ -78,6 +81,14 @@ Ce système repose sur une **architecture en cascade** (Cascaded Architecture) c
 
 ### Orchestration (`TranslationCascade`)
 Le fichier `src/pipeline/translate_cascade.py` est le chef d'orchestre. Il initialise les trois modèles et fait passer les données de l'un à l'autre de manière transparente pour l'utilisateur.
+
+### ❓ Pourquoi cette architecture complexe ?
+
+Pourquoi ne pas faire simplement **Audio Mina ➔ Texte Français** ?
+
+1.  **Manque de Données (Low-Resource)** : Il n'existe pas de dataset massif de type "Audio Mina ↔ Texte Français" pour entraîner une IA directe.
+2.  **La Stratégie Pivot** : Nous disposons de la Bible en Mina et en Éwé. Comme ces langues sont très proches, nous pouvons traduire le Mina en Éwé (plus riche en ressources).
+3.  **Le Rôle de l'ASR** : L'ASR est **indispensable**. C'est le seul moyen de passer du monde sonore au monde textuel. Sans lui, les modèles de traduction (qui ne lisent que du texte) seraient inutilisables pour une application vocale.
 
 ## Structure du Projet (Code)
 
