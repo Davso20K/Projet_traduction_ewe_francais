@@ -42,10 +42,23 @@ class EweBibleScraper:
 
         self.base_text_url = "https://www.bible.com/fr/bible/3306/{book}.{chapter}.EB14"
         self.base_audio_url = "https://www.bible.com/fr/audio-bible/3306/{book}.{chapter}.EB14"
+        
         self.books = {
-            "GEN": {"name": "Genèse", "chapters": 50},
-            "MAT": {"name": "Matthieu", "chapters": 28},
-            "JHN": {"name": "Jean", "chapters": 21},
+            "GEN": {"name": "Gɔ̃mèjèje be Xoma", "chapters": 50},
+            "EXO": {"name": "Toto jo", "chapters": 40},
+            "LEV": {"name": "Levìwo", "chapters": 27},
+            "NUM": {"name": "Àmè Hɛ̃hlɛ̃", "chapters": 36},
+            "DEU": {"name": "Èsea gbìgbɔ̀ hlɛ̃", "chapters": 34},
+            "JOS": {"name": "Yosùa", "chapters": 24},
+            "JDG": {"name": "Kòjoɖotɔwo", "chapters": 21},
+            "RUT": {"name": "Rut", "chapters": 4},
+            "1SA": {"name": "1Samuɛl", "chapters": 31},
+            "2SA": {"name": "2Samuɛl", "chapters": 24},
+            "1KI": {"name": "1Èfìɔwo", "chapters": 22},
+            "2KI": {"name": "2Èfìɔ", "chapters": 25},
+            "1CH": {"name": "1Kronikà", "chapters": 29},
+            "2CH": {"name": "2Kronikà", "chapters": 36},
+            "EZR": {"name": "Ɛzrà", "chapters": 10}
         }
         # self.books = {
         #     "GEN": {"name": "Mose I", "chapters": 50},

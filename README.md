@@ -10,32 +10,31 @@ Ce projet vise à développer une solution complète de reconnaissance vocale et
 - NOYOULIWA Victoire
 
 > [!NOTE]
-> **Statut actuel :** Le projet est en phase active de collecte de données. Les scrapers **Éwé** et **Gegbe (Mina)** ont été entièrement optimisés (extraction des Bibles complètes de 73 livres, gestion des reprises, téléchargements audio par chapitre). L'entraînement des modèles et le développement de l'interface graphique (GUI) sont les prochaines étapes.
+> **Statut actuel :** L'infrastructure technique est prête pour un workflow **100% Local sur CPU**. Les briques ASR (Whisper) et NMT (Mina ➔ Éwé ➔ Français) sont en place avec des optimisations de quantification (INT8). Le dossier `/models` est utilisé pour stocker les poids locaux et les versions optimisées des modèles.
 
 ## Vision du Projet
 
 Le système final offrira les fonctionnalités suivantes :
-1.  **Reconnaissance Vocale (ASR) :** Conversion de fichiers audio ou de flux vocaux en direct en texte (Éwé/Gegbe).
-2.  **Traduction Bidirectionnelle :**
-    -   Éwé/Gegbe ➔ Français / Anglais
-    -   Français / Anglais ➔ Éwé/Gegbe
-3.  **Interface Graphique (GUI) :** Une application simple permettant aux utilisateurs d'interagir facilement avec le système.
+1.  **Reconnaissance Vocale (ASR) :** Conversion de fichiers audio Mina/Éwé en texte via un modèle Whisper unifié.
+2.  **Chaîne de Traduction en Cascade :**
+    -   Mina ➔ Éwé (Adaptation dialectale via NLLB fine-tuné).
+    -   Éwé ➔ Français / Autre (via Helsinki-NLP Opus-MT).
+3.  **Optimisation CPU :** Utilisation de la quantification **INT8**, **faster-whisper** et **CTranslate2** pour garantir des performances fluides sur du matériel grand public (CPU).
+4.  **Interface Graphique (GUI) :** Application interactive pour la saisie audio/texte et l'affichage des traductions.
 
 ## Structure du Projet
 
 ```text
 ├── data/
-│   ├── raw/                # Données brutes (scripts de scraping)
-│   │   ├── ewe/            # Corpus Éwé
-│   │   └── gegbe/          # Corpus Gegbe (Mina)
-│   └── processed/          # Données nettoyées et prêtes pour l'entraînement
-├── models/                 # Modèles entraînés (Whisper, etc.)
-├── notebooks/              # Expérimentations et suivi d'entraînement
+│   ├── raw/                # Données brutes de scraping
+│   ├── processed/          # Corpus parallèle aligné (Mina/Éwé)
+├── models/                 # Stockage local des modèles (Whisper, NLLB, OPUS)
+├── notebooks/              # Travaux d'expérimentation
 ├── src/
-│   ├── scraping/           # Scripts de collecte de données (Bible Éwé & Gegbe)
-│   ├── preprocessing/      # Nettoyage audio et textuel
-│   ├── pipeline/           # Orchestration des tâches
-│   └── config/             # Paramètres du projet
+│   ├── config/             # Hyperparamètres (batch size, freeze, etc.)
+│   ├── models/             # Logique d'inférence et d'entraînement
+│   ├── preprocessing/      # Alignement et nettoyage de corpus
+│   └── scraping/           # Scripts de collecte Bible
 └── requirements.txt        # Dépendances Python
 ```
 
@@ -56,8 +55,11 @@ Les données brutes sont transformées pour être compatibles avec les modèles 
 -   **Dataset :** Génération automatique d'un fichier CSV alignant l'audio et le texte.
 -   **Scripts :** `src/preprocessing/audio_processing.py`, `src/preprocessing/text_cleaning.py`, `src/preprocessing/dataset_builder.py`.
 
-### 3. Modèles (À venir)
-Nous prévoyons d'utiliser et de fine-tuner le modèle **Whisper de OpenAI** pour la partie reconnaissance vocale. Les notebooks de préparation (`notebooks/02_prepare_asr_dataset.ipynb` et `03_train_whisper_ewe.ipynb`) sont déjà en place.
+### 3. Modèles & Orchestration (CPU Ready)
+L'intelligence du système est répartie en trois modules pilotables localement :
+-   **Config Centralisée :** Tous les réglages se trouvent dans `src/config/settings.py` (gel des couches, learning rate).
+-   **Traduction Cascade :** Inférence via `src/pipeline/translate_cascade.py` (Mina ➔ Éwé ➔ Français).
+-   **Entraînement Local :** Script `src/models/train_whisper_cpu.py` optimisé pour ne pas saturer le processeur.
 
 ## Installation
 
@@ -78,18 +80,39 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Utilisation actuelle
+## Guide d'Utilisation (Pas-à-pas)
 
-Pour générer le corpus de données :
+Pour mener à bien le projet de la collecte à la traduction finale, suivez ces étapes dans l'ordre :
+
+### Étape 1 : Collecte des données
+Lancez le scraper pour récupérer les textes et audios des bibles Éwé et Mina.
 ```bash
-# Pour scraper les deux langues (Éwé et Gegbe)
 python -m src.pipeline.build_corpus
-
-# Pour scraper une langue spécifique
-python -m src.pipeline.build_corpus ewe
-python -m src.pipeline.build_corpus gegbe
 ```
-Cela créera les dossiers `raw/ewe` et `raw/gegbe` dans le répertoire `data/`.
+*Cette étape crée aussi automatiquement le fichier d'alignement `data/processed/parallel_mina_ewe.csv`.*
+
+### Étape 2 : Préparation du Dataset ASR
+Ouvrez et exécutez le notebook **`notebooks/02_prepare_asr_dataset.ipynb`**. 
+- Il convertira les audios en WAV 16kHz.
+- Il nettoiera les textes.
+- Il générera le dataset final pour l'entraînement.
+
+### Étape 3 : Entraînement Local (CPU)
+Ouvrez le notebook **`notebooks/03_train_whisper_ewe.ipynb`**.
+- Il appelle le module `src.models.train_whisper_cpu`.
+- Vous pouvez y modifier les hyperparamètres (gel des couches, batch size) et suivre l'avancement de l'apprentissage ASR.
+
+### Étape 4 : Traduction Finale (Cascade)
+Utilisez le même notebook ou le terminal pour tester la chaîne complète :
+```bash
+python -m src.pipeline.translate_cascade
+```
+*Le système prendra une phrase en Mina, la pivotera en Éwé, puis la traduira en Français.*
+
+## Configuration du Matériel
+Le projet est optimisé pour tourner sur **CPU uniquement**. 
+- Inférence : **INT8** via CTranslate2/faster-whisper.
+- Entraînement : **Paramètres gelés à 90%** pour économiser la RAM et le processeur.
 
 
 ## Auteur

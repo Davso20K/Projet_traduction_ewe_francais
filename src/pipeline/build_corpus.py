@@ -23,10 +23,15 @@ async def run(lang=None):
     elif lang == "gegbe":
         await scrape_language(GegbeBibleScraper, "Gegbe")
     else:
-        # Par défaut, on peut soit faire les deux, soit demander
-        # Ici on fait les deux séquentiellement pour rester simple
+        # Scrape les deux
         await scrape_language(EweBibleScraper, "Ewe")
         await scrape_language(GegbeBibleScraper, "Gegbe")
+        
+        # Lance l'alignement parallèle
+        from src.preprocessing.parallel_aligner import ParallelAligner
+        print("--- Alignement du corpus parallèle ---")
+        aligner = ParallelAligner()
+        aligner.align()
 
 if __name__ == "__main__":
     # Permet de passer la langue en argument : python -m src.pipeline.build_corpus ewe

@@ -10,3 +10,8 @@ pandas
 tqdm
 imageio-ffmpeg
 pydub
+transformers
+sentencepiece
+ctranslate2
+datasets
+bitsandbytes

@@ -16,12 +16,17 @@ FFMPEG_EXE = imageio_ffmpeg.get_ffmpeg_exe()
 
 # MP3 → WAV mono 16kHz (OBLIGATOIRE pour ASR)
 
-def convert_mp3_to_wav_16k():
+def convert_mp3_to_wav_16k(lang=None):
     # Liste des dossiers à traiter
-    raw_dirs = [
-        EWE_RAW_DIR / "audio",
-        GEGBE_RAW_DIR / "audio"
-    ]
+    if lang == "ewe":
+        raw_dirs = [EWE_RAW_DIR / "audio"]
+    elif lang == "gegbe":
+        raw_dirs = [GEGBE_RAW_DIR / "audio"]
+    else:
+        raw_dirs = [
+            EWE_RAW_DIR / "audio",
+            GEGBE_RAW_DIR / "audio"
+        ]
     
     audio_files = []
     for d in raw_dirs:
