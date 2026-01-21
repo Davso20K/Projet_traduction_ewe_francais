@@ -9,8 +9,32 @@ Ce projet vise à développer une solution complète de reconnaissance vocale et
 - TEPE Paulin
 - NOYOULIWA Victoire
 
-> [!NOTE]
-> **Statut actuel :** L'infrastructure technique est prête pour un workflow **100% Local sur CPU**. Les briques ASR (Whisper) et NMT (Mina ➔ Éwé ➔ Français) sont en place avec des optimisations de quantification (INT8). Le dossier `/models` est utilisé pour stocker les poids locaux et les versions optimisées des modèles.
+## ✨ Fonctionnalités Clés Implémentées
+
+Le projet intègre nativement les trois piliers suivants, fonctionnels et testés :
+
+### 1. 🎙️ Reconnaissance Vocale (ASR Unifié)
+-   **Objectif** : Convertir la parole (Mina ou Éwé) en texte brut.
+-   **Technologie** : Modèle **OpenAI Whisper** (architecture Transformer).
+-   **Implémentation** : 
+    -   Nous utilisons une approche unifiée où le modèle est capable de transcrire les deux langues.
+    -   Entraînement optimisé pour CPU via le script `src/models/train_whisper_cpu.py`.
+    -   Données : Corpus biblique aligné (Audio Chapitre ↔ Texte).
+
+### 2. 🔄 Chaîne de Traduction en Cascade (Pivot Strategy)
+Une architecture sophistiquée en deux temps pour pallier le manque de données directes Mina-Français :
+-   **Étape A : Mina ➔ Éwé (Normalisation)**
+    -   **Modèle** : `facebook/nllb-200` (No Language Left Behind).
+    -   **Rôle** : Utilise l'Éwé comme langue pivot standardisée. Le modèle est capable de comprendre le Mina (proche dialectalement) et de le reformuler en Éwé écrit standard.
+-   **Étape B : Éwé ➔ Français (Traduction Finale)**
+    -   **Modèle** : `Helsinki-NLP/opus-mt-ee-fr`.
+    -   **Rôle** : Modèle de traduction neuronale spécialisé (NMT) qui assure une haute qualité linguistique vers le français.
+
+### 3. ⚡ Optimisation CPU & Inférence
+Le projet est conçu pour tourner sur des machines sans GPU (ex: laptops étudiants) :
+-   **CTranslate2** : Moteur d'inférence ultra-rapide intégré pour le modèle NMT (`src/models/translation_ewe_fr.py`). Il permet une exécution 2x à 4x plus rapide qu'un modèle PyTorch standard sur CPU.
+-   **Quantification INT8** : Réduction de la précision des poids (de 32 bits à 8 bits) pour diviser par 4 la consommation mémoire sans perte notable de qualité.
+-   **Ready-to-use** : L'infrastructure supporte l'ajout futur de `faster-whisper` pour la partie vocale.
 
 ## Vision du Projet
 
