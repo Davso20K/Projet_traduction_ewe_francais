@@ -35,6 +35,7 @@ def train_whisper_on_cpu(dataset):
         generation_max_length=225,
         save_steps=100,
         eval_steps=100,
+        eval_strategy="steps",
         logging_steps=25,
         report_to=["tensorboard"],
         load_best_model_at_end=True,

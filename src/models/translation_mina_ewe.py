@@ -27,7 +27,7 @@ class MinaEweTranslator:
         # On force la langue cible à l'Ewe
         translated_tokens = self.model.generate(
             **inputs, 
-            forced_bos_token_id=self.tokenizer.lang_code_to_id["ewe_Latn"], 
+            forced_bos_token_id=self.tokenizer.convert_tokens_to_ids("ewe_Latn"), 
             max_length=128
         )
         

@@ -5,7 +5,7 @@ import logging
 
 from src.config.settings import PROJECT_ROOT, META_DIR, GEGBE_META_DIR
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
@@ -23,6 +23,7 @@ def build_asr_dataset():
     ]
 
     rows = []
+    processed_audio = set()
 
     for meta_path in meta_files:
         if not meta_path.exists():
@@ -35,19 +36,26 @@ def build_asr_dataset():
         for r in records:
             if not r["audio_path"]:
                 continue
+            
+            audio_id = r["audio_path"]
+            if audio_id in processed_audio:
+                continue
 
-            wav_name = Path(r["audio_path"]).with_suffix(".wav").name
-            txt_name = Path(r["audio_path"]).with_suffix(".txt").name
+            wav_name = Path(audio_id).with_suffix(".wav").name
+            txt_name = Path(audio_id).with_suffix(".txt").name
 
             wav_path = AUDIO_DIR_16K / wav_name
             txt_path = TEXT_DIR_CLEAN / txt_name
 
             if not wav_path.exists() or not txt_path.exists():
+                # On debug un peu si on ne trouve rien
+                if len(processed_audio) < 5:
+                    logger.debug(f"Missing: wav={wav_path.exists()}, txt={txt_path.exists()} for {wav_name}")
                 continue
 
             text = txt_path.read_text(encoding="utf-8")
 
-            if len(text) < 5:
+            if len(text) < 10: # Versets ou chapitres très courts ignorés
                 continue
 
             rows.append({
@@ -55,6 +63,7 @@ def build_asr_dataset():
                 "text": text,
                 "language": lang
             })
+            processed_audio.add(audio_id)
 
     if not rows:
         logger.warning("Aucune donnée trouvée pour le dataset ASR")
