@@ -22,7 +22,40 @@ Le système final offrira les fonctionnalités suivantes :
 3.  **Optimisation CPU :** Utilisation de la quantification **INT8**, **faster-whisper** et **CTranslate2** pour garantir des performances fluides sur du matériel grand public (CPU).
 4.  **Interface Graphique (GUI) :** Application interactive pour la saisie audio/texte et l'affichage des traductions.
 
-## Structure du Projet
+## Architecture & Logique du Modèle
+
+Ce système repose sur une **architecture en cascade** (Cascaded Architecture) composée de trois intelligences artificielles distinctes qui communiquent entre elles pour réaliser la tâche finale.
+
+### Le Flux de Données
+1.  **Entrée** : Audio (Parole en Mina ou Éwé).
+2.  **Transcription (ASR)** : Le son est converti en texte Mina/Éwé.
+3.  **Pivot (Si nécessaire)** : Si la langue source est le Mina, le texte est traduit vers l'Éwé.
+4.  **Traduction Finale (NMT)** : Le texte Éwé est traduit en Français.
+
+### Les Modèles Composants
+
+#### 1. ASR - Reconnaissance Vocale (`openai/whisper`)
+-   **Rôle** : Convertir l'audio en texte.
+-   **Modèle** : Nous utilisons **OpenAI Whisper (Base/Small)**, fine-tuné sur notre corpus biblique local.
+-   **Lien avec le code** : Géré par `src/models/train_whisper_cpu.py`.
+-   **Importance** : C'est la "bouche" du système. Sans lui, impossible de traiter la parole. Nous l'avons optimisé pour le CPU en gelant 90% de ses paramètres durant l’entraînement.
+
+#### 2. Pivot - Adaptation Dialectale (`facebook/nllb-200`)
+-   **Rôle** : Combler le fossé entre le Mina et l'Éwé.
+-   **Modèle** : **NLLB-200 (No Language Left Behind)** de Meta.
+-   **Logique** : Le Mina manque de ressources directes vers le français. L'Éwé étant une langue sœur très proche avec plus de ressources, nous utilisons NLLB pour "normaliser" le Mina en Éwé standard.
+-   **Lien avec le code** : Implémenté dans `src/models/translation_mina_ewe.py`.
+
+#### 3. NMT - Traduction Finale (`Helsinki-NLP/opus-mt-ee-fr`)
+-   **Rôle** : Traduire le texte Éwé vers le Français.
+-   **Modèle** : **OPUS-MT** de l'Université d'Helsinki.
+-   **Importance** : C'est le modèle spécialisé qui connaît la grammaire française. Il assure la fluidité de la sortie finale.
+-   **Lien avec le code** : Utilisé dans `src/models/translation_ewe_french.py`.
+
+### Orchestration (`TranslationCascade`)
+Le fichier `src/pipeline/translate_cascade.py` est le chef d'orchestre. Il initialise les trois modèles et fait passer les données de l'un à l'autre de manière transparente pour l'utilisateur.
+
+## Structure du Projet (Code)
 
 ```text
 ├── data/
@@ -32,34 +65,17 @@ Le système final offrira les fonctionnalités suivantes :
 ├── notebooks/              # Travaux d'expérimentation
 ├── src/
 │   ├── config/             # Hyperparamètres (batch size, freeze, etc.)
-│   ├── models/             # Logique d'inférence et d'entraînement
+│   ├── models/             # C'est ici que vivent les modèles :
+│   │   ├── train_whisper_cpu.py    # Entraînement ASR
+│   │   ├── translation_mina_ewe.py # Logique du Pivot (NLLB)
+│   │   └── translation_ewe_french.py # Logique NMT Finale
+│   ├── pipeline/           # Orchestration (translate_cascade.py)
 │   ├── preprocessing/      # Alignement et nettoyage de corpus
 │   └── scraping/           # Scripts de collecte Bible
 └── requirements.txt        # Dépendances Python
 ```
 
 ## État d'avancement technique
-
-### 1. Collecte de données (Scraping)
-Des scrapers robustes et optimisés ont été mis en œuvre pour extraire le corpus biblique complet (73 livres, texte et audio) depuis bible.com.
--   **Éwé :** `src/scraping/ewe_bible_scraper.py` (Optimisé, gestion des reprises).
--   **Gegbe (Mina) :** `src/scraping/gegbe_bible_scraper.py` (Optimisé, gestion des reprises).
--   **Structure :** Extraction d'un fichier audio par chapitre pour une meilleure efficacité de stockage et de parsing.
--   **Lancement :** `python -m src.pipeline.build_corpus`
-
-
-### 2. Prétraitement
-Les données brutes sont transformées pour être compatibles avec les modèles de Deep Learning (comme Whisper) :
--   **Audio :** Conversion en WAV mono 16kHz (nécessaire pour l'ASR).
--   **Texte :** Nettoyage des caractères spéciaux, suppression des numéros de versets et normalisation.
--   **Dataset :** Génération automatique d'un fichier CSV alignant l'audio et le texte.
--   **Scripts :** `src/preprocessing/audio_processing.py`, `src/preprocessing/text_cleaning.py`, `src/preprocessing/dataset_builder.py`.
-
-### 3. Modèles & Orchestration (CPU Ready)
-L'intelligence du système est répartie en trois modules pilotables localement :
--   **Config Centralisée :** Tous les réglages se trouvent dans `src/config/settings.py` (gel des couches, learning rate).
--   **Traduction Cascade :** Inférence via `src/pipeline/translate_cascade.py` (Mina ➔ Éwé ➔ Français).
--   **Entraînement Local :** Script `src/models/train_whisper_cpu.py` optimisé pour ne pas saturer le processeur.
 
 ## Installation
 
