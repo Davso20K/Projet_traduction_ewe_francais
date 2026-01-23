@@ -41,15 +41,19 @@ def build_asr_dataset():
             if audio_id in processed_audio:
                 continue
 
-            wav_name = Path(audio_id).with_suffix(".wav").name
-            txt_name = Path(audio_id).with_suffix(".txt").name
-
+            # Construction des noms de fichiers avec prefixe langue (pour correspondre à audio_processing.py et text_cleaning.py)
+            wav_name = f"{lang}_{Path(audio_id).with_suffix('.wav').name}"
+            txt_name = f"{lang}_{Path(audio_id).with_suffix('.txt').name}"
+            
             wav_path = AUDIO_DIR_16K / wav_name
             txt_path = TEXT_DIR_CLEAN / txt_name
-
-            if not wav_path.exists() or not txt_path.exists():
-                # On debug un peu si on ne trouve rien
-                if len(processed_audio) < 5:
+            
+            if not wav_path.exists():
+                # Check legacy filename
+                legacy_wav = AUDIO_DIR_16K / Path(audio_id).with_suffix('.wav').name
+                if legacy_wav.exists():
+                     logger.warning(f"Found legacy file {legacy_wav.name} but missing {wav_name}. PROCESSING STEP REQUIRED: Please restart kernel and re-run audio processing.")
+                elif len(processed_audio) < 5:
                     logger.debug(f"Missing: wav={wav_path.exists()}, txt={txt_path.exists()} for {wav_name}")
                 continue
 

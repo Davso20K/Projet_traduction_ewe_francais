@@ -8,8 +8,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class EweFrenchTranslator:
-    def __init__(self, use_ctranslate2=True):
-        self.model_name = EWE_FR_MODEL
+    def __init__(self, use_ctranslate2=True, model_path=None):
+        self.model_name = model_path if model_path else EWE_FR_MODEL
         self.use_ctranslate = use_ctranslate2
         self.ct_model_path = PROJECT_ROOT / "models" / "ewe_fr_ct2"
         

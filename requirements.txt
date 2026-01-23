@@ -16,3 +16,8 @@ ctranslate2
 datasets
 bitsandbytes
 accelerate>=0.26.0
+evaluate
+jiwer
+soundfile
+scipy
+torchcodec

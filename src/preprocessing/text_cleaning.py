@@ -47,7 +47,7 @@ def clean_all_texts():
                 groups.setdefault(chapter_id, []).append(txt_path)
         
         for chapter_id, paths in groups.items():
-            cleaned_path = PROCESSED_TEXT_DIR / f"{chapter_id}.txt"
+            cleaned_path = PROCESSED_TEXT_DIR / f"{lang}_{chapter_id}.txt"
 
             # On trie les versets par numéro pour l'ordre correct
             def get_verse_num(p):

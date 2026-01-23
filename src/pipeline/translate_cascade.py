@@ -6,10 +6,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class TranslationCascade:
-    def __init__(self):
+    def __init__(self, nllb_path=None, opus_path=None):
         logger.info("Initialisation de la cascade de traduction...")
-        self.mina_ewe = MinaEweTranslator()
-        self.ewe_fr = EweFrenchTranslator(use_ctranslate2=False) # Fallback auto si pas converti
+        self.mina_ewe = MinaEweTranslator(model_path=nllb_path)
+        self.ewe_fr = EweFrenchTranslator(use_ctranslate2=False, model_path=opus_path) # Fallback auto si pas converti
 
     def translate_mina_to_french(self, mina_text):
         logger.info(f"Source (Mina): {mina_text}")
