@@ -21,3 +21,4 @@ jiwer
 soundfile
 scipy
 torchcodec
+sounddevice
