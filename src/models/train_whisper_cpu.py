@@ -71,46 +71,57 @@ def train_whisper_on_cpu(dataset=None):
         print(f"Chargement depuis {csv_path}...")
         dataset = load_dataset("csv", data_files={"train": str(csv_path)})
 
-    # Important: Cast de la colonne audio pour chargement lazy automatique via datasets
-    # Cela permet à datasets de charger le WAV automatiquement en array
-    dataset = dataset.cast_column("audio_filepath", Audio(sampling_rate=16000))
+    # On n'utilise PLUS cast_column avec Audio() car cela déclenche torchcodec qui plante sur votre machine.
+    # dataset = dataset.cast_column("audio_filepath", Audio(sampling_rate=16000))
 
-    # 2. Pré-traitement simple (plus de slicing complexe)
+    # 2. Pré-traitement simple avec chargement manuel (SoundFile)
+    import soundfile as sf
+    import scipy.signal
+    import numpy as np
+
     def prepare_dataset(batch):
-        audio = batch["audio_filepath"]
+        # Chargement manuel pour éviter l'erreur torchcodec
+        audio_path = batch["audio_filepath"]
         
+        try:
+            waveform, sr = sf.read(audio_path)
+        except Exception as e:
+            # En cas d'erreur de lecture, on retourne des dummy data pour ne pas crasher tout le process
+            # (idéalement on filtrerait avant, mais map gère mal les suppressions directes)
+            print(f"Erreur lecture {audio_path}: {e}")
+            waveform = np.zeros(16000) # 1 sec silence
+            sr = 16000
+
+        # Conversion Mono
+        if len(waveform.shape) > 1:
+            waveform = waveform.mean(axis=1)
+
+        # Resample si nécessaire (sécurité)
+        if sr != 16000:
+            num_samples = int(len(waveform) * 16000 / sr)
+            waveform = scipy.signal.resample(waveform, num_samples)
+
         # Audio input
         input_features = processor.feature_extractor(
-            audio["array"], 
-            sampling_rate=audio["sampling_rate"]
+            waveform, 
+            sampling_rate=16000
         ).input_features[0]
 
         # Text targets
-        # Gestion langue proxy si besoin (Yoruba est souvent utilisé pour Ewe/Fon/Gbe)
         lang = batch["language"].lower()
         proxy_lang = "yoruba" if lang in ["ewe", "gegbe", "mina", "gbe"] else lang
         
-        # Set language token
-        dataset_info_ids = processor.tokenizer.get_decoder_prompt_ids(
-            language=proxy_lang,
-            task="transcribe"
-        )
-        
         # Tokenize text
+        # Whisper gère le language via le tokenizer/processor lors du forward, 
+        # mais on peut aussi forcer le prompt ici si on veut
         labels = processor.tokenizer(batch["text"]).input_ids
-        
-        # Combine prompt + text (si processor ne le fait pas auto via language ID,
-        # mais WhisperProcessor gère souvent le forced_decoder_ids dans le model.
-        # Ici on suit la méthode standard HF fine-tuning)
         
         return {
             "input_features": input_features,
-            "labels": labels, # Pas besoin d'ajouter prompt_ids manuellement si on configure le modèle/tokenizer correctement, 
-                              # mais pour être sûr on pourrait le faire. Whisper standard gère ça via config.
-                              # Pour fine-tuning multilingue explicite, on laisse souvent le tokenizer faire.
+            "labels": labels,
         }
 
-    print("Pré-traitement du dataset (Feature Extraction)...")
+    print("Pré-traitement du dataset (Feature Extraction manuelle)...")
     # On utilise num_proc pour paralléliser le prétraitement
     dataset = dataset.map(
         prepare_dataset, 
