@@ -61,6 +61,7 @@ def train_whisper_on_cpu(dataset=None):
 
     model.config.forced_decoder_ids = None
     model.config.suppress_tokens = []
+    model.config.use_cache = False  # DOIT être False si gradient_checkpointing est True, et recommandé sur CPU
 
     # 1. Chargement dataset
     if dataset is None:
@@ -151,13 +152,13 @@ def train_whisper_on_cpu(dataset=None):
     training_args = Seq2SeqTrainingArguments(
         output_dir=str(PROJECT_ROOT / "models" / "whisper-ewe-gegbe-local"),
         per_device_train_batch_size=ASR_BATCH_SIZE, # 4 ou 8 selons RAM
-        gradient_accumulation_steps=4,             # Accumuler pour simuler plus grand batch
+        gradient_accumulation_steps=1,             # Désactivé pour debug autograd
         learning_rate=ASR_LEARNING_RATE,
         warmup_steps=50,
         max_steps=1000,                            # Plus de steps car données plus petites/nombreuses
-        gradient_checkpointing=True,               # Save RAM
+        gradient_checkpointing=False,              # Désactivé car cause RuntimeError sur CPU
         fp16=False,                                # CPU ne supporte pas fp16 (ou mal), bfloat16 si supporté
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         per_device_eval_batch_size=4,
         predict_with_generate=True,
         generation_max_length=225,

@@ -22,3 +22,5 @@ soundfile
 scipy
 torchcodec
 sounddevice
+tensorboard 
+tensorboardX
