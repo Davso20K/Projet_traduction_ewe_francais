@@ -24,6 +24,8 @@ ASR_FREEZE_PERCENT = 0.9  # Freeze 90% of parameters
 ASR_LEARNING_RATE = 1e-4
 ASR_BATCH_SIZE = 4
 ASR_EPOCHS = 10
+TRAINING_NUM_CORES = 4  # Réduit de 10 à 4 pour économiser la RAM sur PC modeste
+ASR_MAX_SAMPLES = 5000   # Limite optionnelle pour éviter les crashs si le dataset est trop gros
 
 # NMT Hyperparameters
 NMT_MODEL_SIZE = "nllb-200-distilled-600M"

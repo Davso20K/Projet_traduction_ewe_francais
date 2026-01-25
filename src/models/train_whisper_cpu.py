@@ -16,6 +16,7 @@ from src.config.settings import (
     ASR_BATCH_SIZE,
     PROJECT_ROOT,
     PROCESSED_DIR,
+    TRAINING_NUM_CORES,
 )
 
 import os
@@ -23,8 +24,8 @@ import multiprocessing
 
 # --- Optimisation CPU ---
 # Sur Windows, set_num_threads est utile pour MKL/OpenMP
-NUM_CORES = multiprocessing.cpu_count()
-torch.set_num_threads(max(1, NUM_CORES - 2)) 
+NUM_CORES = TRAINING_NUM_CORES  # Utilise la limite de 10 cœurs demandée
+torch.set_num_threads(NUM_CORES) 
 
 @dataclass
 class DataCollatorSpeechSeq2SeqWithPadding:
@@ -71,6 +72,12 @@ def train_whisper_on_cpu(dataset=None):
 
         print(f"Chargement depuis {csv_path}...")
         dataset = load_dataset("csv", data_files={"train": str(csv_path)})
+
+        # Subsampling for RAM safety if needed
+        from src.config.settings import ASR_MAX_SAMPLES
+        if ASR_MAX_SAMPLES and len(dataset["train"]) > ASR_MAX_SAMPLES:
+            print(f"Subsampling dataset from {len(dataset['train'])} to {ASR_MAX_SAMPLES} samples for system stability...")
+            dataset["train"] = dataset["train"].shuffle(seed=42).select(range(ASR_MAX_SAMPLES))
 
     # On n'utilise PLUS cast_column avec Audio() car cela déclenche torchcodec qui plante sur votre machine.
     # dataset = dataset.cast_column("audio_filepath", Audio(sampling_rate=16000))
@@ -127,12 +134,24 @@ def train_whisper_on_cpu(dataset=None):
     dataset = dataset.map(
         prepare_dataset, 
         remove_columns=dataset["train"].column_names, 
-        num_proc=max(1, NUM_CORES - 2)
+        num_proc=NUM_CORES
     )
 
-    print(f"Dataset prêt : {len(dataset['train'])} exemples.")
+    print(f"Dataset transformé : {len(dataset['train'])} exemples.")
 
-    # 3. Split
+    # 3. Filtrage des séquences trop longues (décodeur Whisper limité à 448 tokens)
+    MAX_LABEL_LENGTH = 448
+    def filter_labels(labels):
+        return len(labels) <= MAX_LABEL_LENGTH
+
+    print(f"Filtrage des labels > {MAX_LABEL_LENGTH} tokens...")
+    dataset = dataset.filter(
+        lambda x: filter_labels(x["labels"]), 
+        num_proc=NUM_CORES
+    )
+    print(f"Dataset final : {len(dataset['train'])} exemples.")
+
+    # 4. Split
     if "test" not in dataset:
         dataset = dataset["train"].train_test_split(test_size=0.1, seed=42)
 
@@ -191,6 +210,7 @@ def train_whisper_on_cpu(dataset=None):
     trainer.save_model(final_path)
     processor.save_pretrained(final_path)
     print(f"Modèle sauvegardé : {final_path}")
+    return model, processor
 
 if __name__ == "__main__":
     train_whisper_on_cpu()
