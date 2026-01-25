@@ -7,8 +7,14 @@ logger = logging.getLogger(__name__)
 
 class MinaEweTranslator:
     def __init__(self, model_path=None):
-        # Par défaut on charge NLLB-200, mais si on a un modèle fine-tuné localement, on le prend
-        self.model_name = model_path if model_path else f"facebook/{NMT_MODEL_SIZE}"
+        # Par défaut on cherche le modèle fine-tuné localement, sinon NLLB-200
+        default_local = PROJECT_ROOT / "models" / "nllb-mina-ewe-final"
+        if model_path:
+            self.model_name = model_path
+        elif default_local.exists():
+            self.model_name = str(default_local)
+        else:
+            self.model_name = f"facebook/{NMT_MODEL_SIZE}"
         
         logger.info(f"Chargement du modèle Mina-Ewe : {self.model_name}")
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
