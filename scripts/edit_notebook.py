@@ -5,69 +5,37 @@ notebook_path = Path("notebooks/03_train_whisper_ewe.ipynb")
 with open(notebook_path, "r", encoding="utf-8") as f:
     nb = json.load(f)
 
-# Define new cells
-new_cells = [
-    {
-        "cell_type": "markdown",
-        "id": "nmt_train_header",
-        "metadata": {},
-        "source": [
-            "## 2. Amélioration de la Traduction (Mina -> Éwé)\n",
+updated = False
+for cell in nb["cells"]:
+    if cell["cell_type"] == "code" and any("asr_path = settings.PROJECT_ROOT" in line for line in cell["source"]):
+        print("Cellule d'inférence trouvée. Mise à jour des chemins...")
+        cell["source"] = [
+            "# Chemins locaux\n",
+            "asr_path = settings.PROJECT_ROOT / \"models\" / \"whisper-ewe-mina-final\"\n",
+            "nllb_path = settings.PROJECT_ROOT / \"models\" / \"nllb-mina-ewe-final\"\n",
+            "opus_path = settings.PROJECT_ROOT / \"models\" / \"opus-ewe-fr-local\"\n",
             "\n",
-            "Le modèle NLLB-200 par défaut peut manquer de précision pour les spécificités locales. Nous fine-tunons ici le traducteur sur le corpus parallèle de la Bible (Mina/Éwé)."
-        ]
-    },
-    {
-        "cell_type": "code",
-        "execution_count": None,
-        "id": "nmt_data_prep",
-        "metadata": {},
-        "outputs": [],
-        "source": [
-            "import importlib\n",
-            "import src.preprocessing.prepare_nmt_dataset\n",
-            "importlib.reload(src.preprocessing.prepare_nmt_dataset)\n",
-            "from src.preprocessing.prepare_nmt_dataset import prepare_parallel_dataset\n",
+            "print(\"1. Chargement du modèle ASR local...\")\n",
+            "try:\n",
+            "    loaded_processor = WhisperProcessor.from_pretrained(asr_path)\n",
+            "    loaded_model = WhisperForConditionalGeneration.from_pretrained(asr_path)\n",
+            "    print(\"   OK.\")\n",
+            "except Exception as e:\n",
+            "    print(f\"   Erreur ASR (il faut lancer l'entraînement avant) : {e}\")\n",
+            "    # Fallback pour ne pas bloquer si pas entraîné dans cette session\n",
+            "    loaded_processor = processor \n",
+            "    loaded_model = model\n",
             "\n",
-            "print(\"Préparation du dataset parallèle Mina-Éwé...\")\n",
-            "prepare_parallel_dataset()\n",
-            "print(\"Terminé.\")"
+            "print(\"2. Initialisation de la Cascade avec les modèles locaux...\")\n",
+            "cascade = TranslationCascade(nllb_path=str(nllb_path), opus_path=str(opus_path))\n",
+            "print(\"   OK.\")\n"
         ]
-    },
-    {
-        "cell_type": "code",
-        "execution_count": None,
-        "id": "nmt_train_run",
-        "metadata": {},
-        "outputs": [],
-        "source": [
-            "import src.models.train_translation_cpu\n",
-            "importlib.reload(src.models.train_translation_cpu)\n",
-            "from src.models.train_translation_cpu import train_mina_ewe_nmt\n",
-            "\n",
-            "print(\"Démarrage du fine-tuning du traducteur (CPU)...\")\n",
-            "# Cet entraînement est beaucoup plus rapide que Whisper.\n",
-            "train_mina_ewe_nmt()\n",
-            "print(\"Entraînement NMT terminé !\")"
-        ]
-    }
-]
+        updated = True
+        break
 
-# Find index to insert (after section 1)
-insert_idx = -1
-for i, cell in enumerate(nb["cells"]):
-    if cell["cell_type"] == "markdown" and any("## 2." in line for line in cell["source"]):
-        # Update renumbered sections
-        cell["source"] = [line.replace("## 2.", "## 3.") for line in cell["source"]]
-        if insert_idx == -1:
-            insert_idx = i
-    elif cell["cell_type"] == "markdown" and any("## 3." in line for line in cell["source"]):
-         cell["source"] = [line.replace("## 3.", "## 4.") for line in cell["source"]]
-
-if insert_idx != -1:
-    nb["cells"][insert_idx:insert_idx] = new_cells
+if updated:
     with open(notebook_path, "w", encoding="utf-8") as f:
         json.dump(nb, f, indent=1, ensure_ascii=False)
-    print("Notebook mis à jour avec succès.")
+    print("Notebook mis à jour avec les nouveaux chemins de modèles.")
 else:
-    print("Erreur: Section '## 2.' non trouvée.")
+    print("Erreur: Cellule d'inférence non trouvée dans le notebook.")

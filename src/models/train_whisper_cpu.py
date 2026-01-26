@@ -206,7 +206,7 @@ def train_whisper_on_cpu(dataset=None):
     print("Démarrage de l'entraînement...")
     trainer.train()
     
-    final_path = PROJECT_ROOT / "models" / "whisper-ewe-gegbe-final"
+    final_path = PROJECT_ROOT / "models" / "whisper-ewe-mina-final"
     trainer.save_model(final_path)
     processor.save_pretrained(final_path)
     print(f"Modèle sauvegardé : {final_path}")
